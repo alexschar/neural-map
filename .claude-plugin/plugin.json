@@ -1,0 +1,22 @@
+{
+  "name": "neural-map",
+  "version": "0.1.0",
+  "description": "Visualize your Claude Code project as a navigable concept map. Each file gets a simplified name and metaphor instead of raw filenames.",
+  "author": {
+    "name": "Alex Schar",
+    "url": "https://alexschar.dev"
+  },
+  "license": "MIT",
+  "homepage": "https://github.com/alexschar/neural-map",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/alexschar/neural-map.git"
+  },
+  "keywords": [
+    "visualization",
+    "project-map",
+    "concept-map",
+    "context",
+    "organization"
+  ]
+}

@@ -1,0 +1,17 @@
+{
+  "name": "alexschar",
+  "owner": {
+    "name": "Alex Schar",
+    "url": "https://alexschar.dev"
+  },
+  "plugins": [
+    {
+      "name": "neural-map",
+      "source": ".",
+      "description": "Visualize your Claude Code project as a navigable concept map. Each file gets a simplified name and metaphor instead of raw filenames.",
+      "version": "0.1.0",
+      "category": "visualization",
+      "tags": ["context", "organization", "visualization"]
+    }
+  ]
+}
