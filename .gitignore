@@ -1,0 +1,6 @@
+node_modules/
+.DS_Store
+.claude/neural-map/state.json
+*.log
+.env
+.env.local
