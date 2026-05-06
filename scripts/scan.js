@@ -24,6 +24,11 @@ const IGNORE_DIRS = new Set([
   '.cache', '.vscode', '.idea', 'coverage', '.turbo',
   '__pycache__', '.pytest_cache', 'venv', '.venv',
   'DerivedData', 'Pods', '.expo',
+  // iOS / Xcode conventions: case-sensitive matching means we need the
+  // capital-B variants explicitly. Xcode rebuilds touch hundreds of files
+  // in Build/Intermediates.noindex/ on every build, and without these
+  // entries they steal slots in the recency-sorted top-30 from real source.
+  'Build', 'Intermediates.noindex', 'xcuserdata',
   '.claude' // MVP: exclude .claude entirely; revisit in Phase 2 if user CLAUDE.md inclusion matters
 ]);
 
@@ -106,8 +111,13 @@ function readPreview(absPath) {
     const bytesRead = fs.readSync(fd, buf, 0, PREVIEW_BYTES, 0);
     fs.closeSync(fd);
     const text = buf.slice(0, bytesRead).toString('utf8');
-    // Drop anything past the first null byte (binary contamination guard)
-    const nullIdx = text.indexOf('\u0000');
+    // Drop anything past the first null byte (binary contamination guard).
+    // Use String.fromCharCode(0) rather than the '\u0000' literal — markdown
+    // → code-writer pipelines (Cursor's Write tool, some agents) can process
+    // the unicode escape into an actual NUL byte during spec materialization,
+    // which silently breaks the indexOf check.
+    const NUL = String.fromCharCode(0);
+    const nullIdx = text.indexOf(NUL);
     return nullIdx === -1 ? text : text.slice(0, nullIdx);
   } catch (err) {
     return '';
