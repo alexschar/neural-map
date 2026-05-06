@@ -8,10 +8,7 @@
   },
   "license": "MIT",
   "homepage": "https://github.com/alexschar/neural-map",
-  "repository": {
-    "type": "git",
-    "url": "https://github.com/alexschar/neural-map.git"
-  },
+  "repository": "https://github.com/alexschar/neural-map.git",
   "keywords": [
     "visualization",
     "project-map",
