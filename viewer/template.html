@@ -1,0 +1,389 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Neural Map</title>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet" />
+<script src="https://cdn.jsdelivr.net/npm/d3@7"></script>
+<style>
+  :root {
+    --surface: #031427;
+    --surface-container: #102034;
+    --surface-container-high: #1b2b3f;
+    --on-surface: #d3e4fe;
+    --on-surface-variant: #c6c6cd;
+    --secondary: #5de6ff;
+    --tertiary: #ddb7ff;
+    --primary: #bec6e0;
+    --outline: #909097;
+
+    --cat-entry: #5de6ff;
+    --cat-logic: #ddb7ff;
+    --cat-data: #a2eeff;
+    --cat-ui: #f0dbff;
+    --cat-config: #00cbe6;
+    --cat-style: #bec6e0;
+    --cat-test: #909097;
+    --cat-doc: #c6c6cd;
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    padding: 0;
+    font-family: 'Inter', sans-serif;
+    background: var(--surface);
+    color: var(--on-surface);
+    overflow: hidden;
+    height: 100vh;
+  }
+  body::before {
+    content: '';
+    position: fixed;
+    inset: 0;
+    background-image: radial-gradient(rgba(93, 230, 255, 0.4) 0.5px, transparent 0.5px);
+    background-size: 32px 32px;
+    opacity: 0.2;
+    pointer-events: none;
+    z-index: 0;
+  }
+  header {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    padding: 16px 24px;
+    background: rgba(3, 20, 39, 0.6);
+    backdrop-filter: blur(12px);
+    border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+    z-index: 10;
+    display: flex;
+    align-items: baseline;
+    gap: 24px;
+  }
+  header h1 {
+    margin: 0;
+    font-size: 20px;
+    font-weight: 600;
+    color: var(--secondary);
+    letter-spacing: -0.01em;
+  }
+  header .meta {
+    font-size: 12px;
+    color: var(--on-surface-variant);
+    opacity: 0.7;
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+  }
+  header .legend {
+    margin-left: auto;
+    display: flex;
+    gap: 16px;
+    font-size: 11px;
+    color: var(--on-surface-variant);
+  }
+  header .legend span {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+  }
+  header .legend .dot {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+  }
+  #graph {
+    position: fixed;
+    inset: 0;
+    z-index: 1;
+  }
+  .node-circle {
+    cursor: pointer;
+    transition: filter 0.2s ease;
+    filter: drop-shadow(0 0 8px currentColor);
+  }
+  .node-circle:hover {
+    filter: drop-shadow(0 0 16px currentColor);
+  }
+  .node-label {
+    fill: var(--on-surface);
+    font-size: 12px;
+    font-weight: 600;
+    pointer-events: none;
+    text-anchor: middle;
+  }
+  .link {
+    stroke: var(--secondary);
+    stroke-opacity: 0.2;
+    stroke-dasharray: 4 6;
+  }
+  #detail-panel {
+    position: fixed;
+    top: 80px;
+    right: 24px;
+    width: 320px;
+    padding: 20px;
+    background: rgba(27, 43, 63, 0.85);
+    backdrop-filter: blur(16px);
+    border: 1px solid rgba(93, 230, 255, 0.2);
+    border-radius: 12px;
+    box-shadow: 0 0 24px rgba(93, 230, 255, 0.1);
+    z-index: 20;
+    opacity: 0;
+    transform: translateX(20px);
+    transition: opacity 0.2s ease, transform 0.2s ease;
+    pointer-events: none;
+  }
+  #detail-panel.visible {
+    opacity: 1;
+    transform: translateX(0);
+    pointer-events: auto;
+  }
+  #detail-panel .concept-name {
+    font-size: 22px;
+    font-weight: 600;
+    margin-bottom: 8px;
+  }
+  #detail-panel .metaphor {
+    font-size: 14px;
+    line-height: 1.5;
+    color: var(--on-surface-variant);
+    font-style: italic;
+    margin-bottom: 16px;
+  }
+  #detail-panel .filepath {
+    font-size: 11px;
+    font-family: 'SF Mono', Menlo, monospace;
+    color: var(--secondary);
+    background: rgba(93, 230, 255, 0.08);
+    padding: 6px 10px;
+    border-radius: 4px;
+    word-break: break-all;
+    margin-bottom: 12px;
+  }
+  #detail-panel .stats {
+    display: flex;
+    gap: 16px;
+    font-size: 11px;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    color: var(--on-surface-variant);
+  }
+  #detail-panel .stats span strong {
+    display: block;
+    font-size: 16px;
+    color: var(--on-surface);
+    text-transform: none;
+    letter-spacing: 0;
+    margin-top: 2px;
+  }
+  .dp-close {
+    position: absolute;
+    top: 10px;
+    right: 12px;
+    background: transparent;
+    border: none;
+    color: var(--on-surface-variant);
+    font-size: 22px;
+    line-height: 1;
+    cursor: pointer;
+    padding: 4px 10px;
+    border-radius: 4px;
+    transition: color 0.15s ease, background 0.15s ease;
+  }
+  .dp-close:hover {
+    color: var(--on-surface);
+    background: rgba(255, 255, 255, 0.06);
+  }
+  #empty-state {
+    position: fixed;
+    inset: 0;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    text-align: center;
+    z-index: 5;
+    color: var(--on-surface-variant);
+  }
+  #empty-state h2 {
+    color: var(--secondary);
+    font-size: 24px;
+    margin-bottom: 8px;
+  }
+  #empty-state p {
+    max-width: 400px;
+    line-height: 1.6;
+  }
+</style>
+</head>
+<body>
+
+<header>
+  <h1 id="project-title">Neural Map</h1>
+  <span class="meta" id="generated-at"></span>
+  <div class="legend">
+    <span><i class="dot" style="background:var(--cat-entry)"></i>Entry</span>
+    <span><i class="dot" style="background:var(--cat-logic)"></i>Logic</span>
+    <span><i class="dot" style="background:var(--cat-data)"></i>Data</span>
+    <span><i class="dot" style="background:var(--cat-ui)"></i>UI</span>
+    <span><i class="dot" style="background:var(--cat-config)"></i>Config</span>
+    <span><i class="dot" style="background:var(--cat-style)"></i>Style</span>
+    <span><i class="dot" style="background:var(--cat-test)"></i>Test</span>
+    <span><i class="dot" style="background:var(--cat-doc)"></i>Doc</span>
+  </div>
+</header>
+
+<svg id="graph"></svg>
+
+<aside id="detail-panel">
+  <button class="dp-close" id="dp-close" aria-label="Close detail panel">×</button>
+  <div class="concept-name" id="dp-name"></div>
+  <div class="metaphor" id="dp-metaphor"></div>
+  <div class="filepath" id="dp-path"></div>
+  <div class="stats">
+    <span>Category<strong id="dp-cat"></strong></span>
+    <span>Weight<strong id="dp-weight"></strong></span>
+    <span>Size<strong id="dp-size"></strong></span>
+  </div>
+</aside>
+
+<div id="empty-state" style="display:none">
+  <h2>No nodes yet</h2>
+  <p>Run <code>/neural-map</code> in your Claude Code session to scan the project and generate this visualization.</p>
+</div>
+
+<script>
+  const STATE = __NEURAL_MAP_STATE__;
+
+  // ---- Setup ----
+  const svg = d3.select('#graph');
+  const width = window.innerWidth;
+  const height = window.innerHeight;
+  svg.attr('width', width).attr('height', height);
+
+  document.getElementById('project-title').textContent = STATE.projectName || 'Neural Map';
+  if (STATE.generated) {
+    const d = new Date(STATE.generated);
+    document.getElementById('generated-at').textContent =
+      `Generated ${d.toLocaleDateString()} ${d.toLocaleTimeString()}`;
+  }
+
+  if (!STATE.nodes || STATE.nodes.length === 0) {
+    document.getElementById('empty-state').style.display = 'flex';
+  } else {
+    renderGraph(STATE.nodes);
+  }
+
+  function renderGraph(nodes) {
+    // Build link list from connections[]
+    const idSet = new Set(nodes.map(n => n.id));
+    const links = [];
+    nodes.forEach(n => {
+      (n.connections || []).forEach(targetId => {
+        if (idSet.has(targetId)) {
+          links.push({ source: n.id, target: targetId });
+        }
+      });
+    });
+
+    const simulation = d3.forceSimulation(nodes)
+      .force('link', d3.forceLink(links).id(d => d.id).distance(140))
+      .force('charge', d3.forceManyBody().strength(-400))
+      .force('center', d3.forceCenter(width / 2, height / 2))
+      .force('collide', d3.forceCollide(d => 12 + (d.weight || 1) * 8));
+
+    const linkSel = svg.append('g')
+      .selectAll('line')
+      .data(links)
+      .join('line')
+      .attr('class', 'link')
+      .attr('stroke-width', 2);
+
+    const nodeGroup = svg.append('g')
+      .selectAll('g')
+      .data(nodes)
+      .join('g')
+      .call(drag(simulation))
+      .on('click', (event, d) => showDetail(d));
+
+    nodeGroup.append('circle')
+      .attr('class', 'node-circle')
+      .attr('r', d => 10 + (d.weight || 1) * 6)
+      .attr('fill', d => `var(--cat-${d.category || 'doc'})`)
+      .attr('stroke', 'rgba(255,255,255,0.15)')
+      .attr('stroke-width', 1.5);
+
+    nodeGroup.append('text')
+      .attr('class', 'node-label')
+      .attr('dy', d => 28 + (d.weight || 1) * 6)
+      .text(d => {
+        const name = d.conceptName || '';
+        return name.length > 24 ? name.slice(0, 23) + '…' : name;
+      });
+
+    simulation.on('tick', () => {
+      linkSel
+        .attr('x1', d => d.source.x)
+        .attr('y1', d => d.source.y)
+        .attr('x2', d => d.target.x)
+        .attr('y2', d => d.target.y);
+
+      nodeGroup.attr('transform', d => `translate(${d.x},${d.y})`);
+    });
+
+    window.addEventListener('resize', () => {
+      const w = window.innerWidth;
+      const h = window.innerHeight;
+      svg.attr('width', w).attr('height', h);
+      simulation.force('center', d3.forceCenter(w / 2, h / 2));
+      simulation.alpha(0.3).restart();
+    });
+  }
+
+  function drag(simulation) {
+    return d3.drag()
+      .on('start', (event, d) => {
+        if (!event.active) simulation.alphaTarget(0.3).restart();
+        d.fx = d.x;
+        d.fy = d.y;
+      })
+      .on('drag', (event, d) => {
+        d.fx = event.x;
+        d.fy = event.y;
+      })
+      .on('end', (event, d) => {
+        if (!event.active) simulation.alphaTarget(0);
+        d.fx = null;
+        d.fy = null;
+      });
+  }
+
+  function showDetail(d) {
+    document.getElementById('dp-name').textContent = d.conceptName || '—';
+    document.getElementById('dp-metaphor').textContent = d.metaphor || '';
+    document.getElementById('dp-path').textContent = d.path || '';
+    document.getElementById('dp-cat').textContent = d.category || '—';
+    document.getElementById('dp-weight').textContent = d.weight || '—';
+    document.getElementById('dp-size').textContent = d.size ? formatBytes(d.size) : '—';
+    document.getElementById('detail-panel').classList.add('visible');
+  }
+
+  function formatBytes(n) {
+    if (n < 1024) return n + ' B';
+    if (n < 1024 * 1024) return (n / 1024).toFixed(1) + ' KB';
+    return (n / 1024 / 1024).toFixed(1) + ' MB';
+  }
+
+  document.addEventListener('keydown', e => {
+    if (e.key === 'Escape') {
+      document.getElementById('detail-panel').classList.remove('visible');
+    }
+  });
+
+  document.getElementById('dp-close').addEventListener('click', () => {
+    document.getElementById('detail-panel').classList.remove('visible');
+  });
+</script>
+</body>
+</html>
