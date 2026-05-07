@@ -45,6 +45,7 @@ For each file in the scanner output, generate a concept entry with this exact sh
 {
   "id": "<id from scanner output — use verbatim, do not regenerate>",
   "path": "<path from scanner output>",
+  "size": <size in bytes from scanner output — copy verbatim>,
   "previewHash": "<previewHash from scanner output — use verbatim>",
   "conceptName": "<2-4 evocative words, Title Case, ≤24 characters total>",
   "metaphor": "<one short sentence — what this file IS, in plain language>",
@@ -54,13 +55,14 @@ For each file in the scanner output, generate a concept entry with this exact sh
 }
 ```
 
-`id` and `previewHash` come from the scanner — copy them verbatim. Do not generate your own.
+`id`, `size`, and `previewHash` come from the scanner — copy them verbatim. Do not generate your own.
 
 **Concept naming rules:**
 - The `conceptName` is poetic-but-clear. Avoid generic names like "Auth Module" or "Database Schema" — those defeat the entire point of this plugin.
 - **Hard length limit: 24 characters total.** SVG text doesn't wrap — names longer than 24 chars overflow the node visually. The viewer truncates defensively at render with an ellipsis, but plan inside the limit.
 - The `metaphor` is one sentence, written *as if explaining to a curious non-coder*. NOT "Validates JWT tokens against the auth provider." YES "Checks IDs at the door before letting requests inside."
 - Use the file's content (preview) AND its path to infer the role. A file named `auth.ts` containing JWT logic is "The Bouncer." A file named `auth.ts` containing a login UI is "The Front Desk."
+- **Stay inside one world.** Before naming individual files, glance over the full scanner output and pick a single extended metaphor that fits this project (e.g. a house, a theater, a workshop, a kitchen, a city). Then name every file as a part of *that* world — foundation, front door, wiring, dressing room. Don't mix worlds in one map: "The Bouncer" + "The Conductor" + "The Welcome Mat" reads as three unrelated metaphors. The same files named "The Front Door" + "The Foundation" + "The Welcome Mat" read as one house. The map is a place the user walks through, not a vocabulary list — the names should feel like they belong together.
 
 **Concept name examples by category — use these as anchors for the *level* you're aiming for:**
 
@@ -112,7 +114,7 @@ If `.claude/neural-map/state.json` already exists, read it. Otherwise, treat exi
 For each scanner entry, look up the existing node by `id`:
 
 1. **No existing node (new file):** generate the full concept entry from scratch, including `conceptName`, `metaphor`, `category`, `weight`, `connections`.
-2. **Existing node, `previewHash` matches scanner's `previewHash`:** the file's content is materially unchanged. **Preserve the existing `conceptName`, `metaphor`, `category`, and `weight` verbatim.** Update only `path` (in case of rename), `modified`, `previewHash` (same value), and `connections` (which can shift as the project's other files change).
+2. **Existing node, `previewHash` matches scanner's `previewHash`:** the file's content is materially unchanged. **Preserve the existing `conceptName`, `metaphor`, `category`, and `weight` verbatim.** Update only `path` (in case of rename), `size`, `modified`, `previewHash` (same value), and `connections` (which can shift as the project's other files change).
 3. **Existing node, `previewHash` differs:** the file has materially changed. Regenerate `conceptName`, `metaphor`, `category`, `weight`, and `connections` from scratch — the previous concept may no longer fit.
 
 For nodes in existing state whose `id` doesn't appear in the current scan (file deleted or no longer in the recent-30): set `archived: true` rather than removing the entry. Don't generate concepts for archived nodes.

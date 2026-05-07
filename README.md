@@ -25,7 +25,7 @@ It's a Claude Code plugin. The same model that's writing your code does the labe
 In any project:
 
 ```
-/neural-map:neural-map
+/neural-map:map
 ```
 
 Claude scans the most-recently-modified files in your project, generates concept names and metaphors for each, writes the result to `.claude/neural-map/state.json`, and opens the visualization in your browser.
@@ -43,7 +43,7 @@ Run on this repo (a small Claude Code plugin), Neural Map produced:
 
 | File | Concept name | Metaphor |
 |---|---|---|
-| `commands/neural-map.md` | The Director's Notes | The script the director hands the cast — every cue, every scene, in order. |
+| `commands/map.md` | The Director's Notes | The script the director hands the cast — every cue, every scene, in order. |
 | `scripts/scan.js` | The Census Taker | Walks every room of the house, writes down who lives where and how recently they moved in. |
 | `viewer/template.html` | The Display Case | The empty glass case the museum drops the day's exhibit into. |
 | `.claude-plugin/marketplace.json` | The Storefront Sign | The sign hung above the shop door so passersby know what's sold inside. |
@@ -52,7 +52,7 @@ Run on this repo (a small Claude Code plugin), Neural Map produced:
 
 ## What this is not (yet)
 
-- ❌ Real-time updates (re-run `/neural-map:neural-map` to refresh)
+- ❌ Real-time updates (re-run `/neural-map:map` to refresh)
 - ❌ Drag-to-connect node editing
 - ❌ Editable concept names from the viewer
 - ❌ Multi-project workspace view

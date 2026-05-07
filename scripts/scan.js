@@ -7,7 +7,7 @@
  * text files as JSON on stdout. Excludes node_modules, .git, build outputs,
  * binaries, and lock files.
  *
- * Output is consumed by the /neural-map slash command.
+ * Output is consumed by the /neural-map:map slash command.
  */
 
 const fs = require('fs');
