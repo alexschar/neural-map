@@ -26,6 +26,8 @@
     --cat-style: #bec6e0;
     --cat-test: #909097;
     --cat-doc: #c6c6cd;
+
+    --select-ring: #5de6ff;
   }
   * { box-sizing: border-box; }
   body {
@@ -60,6 +62,7 @@
     display: flex;
     align-items: baseline;
     gap: 24px;
+    flex-wrap: wrap;
   }
   header h1 {
     margin: 0;
@@ -74,6 +77,12 @@
     opacity: 0.7;
     text-transform: uppercase;
     letter-spacing: 0.1em;
+  }
+  header .world {
+    font-size: 12px;
+    color: var(--tertiary);
+    font-style: italic;
+    opacity: 0.85;
   }
   header .legend {
     margin-left: auto;
@@ -105,6 +114,11 @@
   .node-circle:hover {
     filter: drop-shadow(0 0 16px currentColor);
   }
+  .node-circle.selected {
+    stroke: var(--select-ring);
+    stroke-width: 3;
+    filter: drop-shadow(0 0 20px var(--select-ring));
+  }
   .node-label {
     fill: var(--on-surface);
     font-size: 12px;
@@ -117,6 +131,8 @@
     stroke-opacity: 0.2;
     stroke-dasharray: 4 6;
   }
+
+  /* ---- Detail panel (unchanged from v0.1) ---- */
   #detail-panel {
     position: fixed;
     top: 80px;
@@ -195,6 +211,147 @@
     color: var(--on-surface);
     background: rgba(255, 255, 255, 0.06);
   }
+
+  /* ---- Composer panel (NEW in v0.2) ---- */
+  #composer {
+    position: fixed;
+    bottom: 24px;
+    left: 24px;
+    width: 380px;
+    padding: 18px 20px 16px;
+    background: rgba(27, 43, 63, 0.9);
+    backdrop-filter: blur(16px);
+    border: 1px solid rgba(93, 230, 255, 0.25);
+    border-radius: 12px;
+    box-shadow: 0 0 32px rgba(93, 230, 255, 0.12);
+    z-index: 25;
+    opacity: 0;
+    transform: translateY(16px);
+    transition: opacity 0.2s ease, transform 0.2s ease;
+    pointer-events: none;
+  }
+  #composer.visible {
+    opacity: 1;
+    transform: translateY(0);
+    pointer-events: auto;
+  }
+  #composer .composer-title {
+    font-size: 11px;
+    text-transform: uppercase;
+    letter-spacing: 0.12em;
+    color: var(--on-surface-variant);
+    margin-bottom: 12px;
+  }
+  #composer .selection-list {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    margin-bottom: 12px;
+    max-height: 96px;
+    overflow-y: auto;
+    padding-right: 4px;
+  }
+  #composer .selection-chip {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 6px 10px;
+    background: rgba(93, 230, 255, 0.06);
+    border: 1px solid rgba(93, 230, 255, 0.15);
+    border-radius: 6px;
+    font-size: 12px;
+  }
+  #composer .selection-chip .dot {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    flex-shrink: 0;
+  }
+  #composer .selection-chip .chip-name {
+    font-weight: 600;
+    color: var(--on-surface);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+  #composer .selection-chip .chip-path {
+    color: var(--on-surface-variant);
+    opacity: 0.7;
+    font-family: 'SF Mono', Menlo, monospace;
+    font-size: 10px;
+    margin-left: auto;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    max-width: 140px;
+  }
+  #composer textarea {
+    width: 100%;
+    min-height: 72px;
+    max-height: 200px;
+    padding: 10px 12px;
+    background: rgba(3, 20, 39, 0.5);
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    border-radius: 6px;
+    color: var(--on-surface);
+    font-family: 'Inter', sans-serif;
+    font-size: 13px;
+    line-height: 1.5;
+    resize: vertical;
+    outline: none;
+    transition: border-color 0.15s ease;
+  }
+  #composer textarea:focus {
+    border-color: rgba(93, 230, 255, 0.4);
+  }
+  #composer textarea::placeholder {
+    color: var(--on-surface-variant);
+    opacity: 0.5;
+  }
+  #composer .composer-actions {
+    display: flex;
+    gap: 8px;
+    margin-top: 12px;
+  }
+  #composer button {
+    font-family: inherit;
+    font-size: 13px;
+    font-weight: 600;
+    padding: 8px 14px;
+    border-radius: 6px;
+    border: none;
+    cursor: pointer;
+    transition: background 0.15s ease;
+  }
+  #composer .btn-ask {
+    background: var(--secondary);
+    color: var(--surface);
+    flex: 1;
+  }
+  #composer .btn-ask:hover { background: #7eedff; }
+  #composer .btn-ask:disabled {
+    background: rgba(93, 230, 255, 0.3);
+    cursor: not-allowed;
+  }
+  #composer .btn-cancel {
+    background: transparent;
+    color: var(--on-surface-variant);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+  }
+  #composer .btn-cancel:hover {
+    color: var(--on-surface);
+    background: rgba(255, 255, 255, 0.04);
+  }
+  #composer .composer-status {
+    margin-top: 10px;
+    font-size: 11px;
+    color: var(--on-surface-variant);
+    min-height: 14px;
+  }
+  #composer .composer-status.error { color: #ff9b9b; }
+  #composer .composer-status.success { color: var(--secondary); }
+
+  /* ---- Empty state (unchanged from v0.1) ---- */
   #empty-state {
     position: fixed;
     inset: 0;
@@ -222,6 +379,7 @@
 <header>
   <h1 id="project-title">Neural Map</h1>
   <span class="meta" id="generated-at"></span>
+  <span class="world" id="world-label"></span>
   <div class="legend">
     <span><i class="dot" style="background:var(--cat-entry)"></i>Entry</span>
     <span><i class="dot" style="background:var(--cat-logic)"></i>Logic</span>
@@ -248,6 +406,17 @@
   </div>
 </aside>
 
+<aside id="composer">
+  <div class="composer-title" id="composer-title">Selected — click "Ask" to send to Claude</div>
+  <div class="selection-list" id="selection-list"></div>
+  <textarea id="composer-input" placeholder="Ask Claude about these files… (e.g. how should these talk to each other?)"></textarea>
+  <div class="composer-actions">
+    <button class="btn-ask" id="btn-ask" disabled>Ask</button>
+    <button class="btn-cancel" id="btn-cancel">Clear</button>
+  </div>
+  <div class="composer-status" id="composer-status"></div>
+</aside>
+
 <div id="empty-state" style="display:none">
   <h2>No nodes yet</h2>
   <p>Run <code>/neural-map:map</code> in your Claude Code session to scan the project and generate this visualization.</p>
@@ -255,6 +424,7 @@
 
 <script>
   const STATE = __NEURAL_MAP_STATE__;
+  const SERVER_URL = 'http://127.0.0.1:3737';
 
   // ---- Setup ----
   const svg = d3.select('#graph');
@@ -268,15 +438,23 @@
     document.getElementById('generated-at').textContent =
       `Generated ${d.toLocaleDateString()} ${d.toLocaleTimeString()}`;
   }
+  if (STATE.worldMetaphor) {
+    document.getElementById('world-label').textContent = `mapped as ${STATE.worldMetaphor}`;
+  }
+
+  // ---- Selection state ----
+  const selection = new Set(); // ids of selected nodes
+  let nodesById = new Map(); // populated after renderGraph
+  let nodeCircles = null; // d3 selection of node circles, for class toggling
 
   if (!STATE.nodes || STATE.nodes.length === 0) {
     document.getElementById('empty-state').style.display = 'flex';
   } else {
+    nodesById = new Map(STATE.nodes.map(n => [n.id, n]));
     renderGraph(STATE.nodes);
   }
 
   function renderGraph(nodes) {
-    // Build link list from connections[]
     const idSet = new Set(nodes.map(n => n.id));
     const links = [];
     nodes.forEach(n => {
@@ -305,9 +483,21 @@
       .data(nodes)
       .join('g')
       .call(drag(simulation))
-      .on('click', (event, d) => showDetail(d));
+      .on('click', (event, d) => {
+        // Shift-click: toggle membership in selection (multi-select)
+        // Plain click: replace selection with just this node, also open detail panel
+        if (event.shiftKey) {
+          if (selection.has(d.id)) selection.delete(d.id);
+          else selection.add(d.id);
+        } else {
+          selection.clear();
+          selection.add(d.id);
+          showDetail(d);
+        }
+        renderSelectionUI();
+      });
 
-    nodeGroup.append('circle')
+    nodeCircles = nodeGroup.append('circle')
       .attr('class', 'node-circle')
       .attr('r', d => 10 + (d.weight || 1) * 6)
       .attr('fill', d => `var(--cat-${d.category || 'doc'})`)
@@ -375,9 +565,150 @@
     return (n / 1024 / 1024).toFixed(1) + ' MB';
   }
 
+  // ---- Selection UI ----
+  function renderSelectionUI() {
+    // Update node ring styling
+    if (nodeCircles) {
+      nodeCircles.classed('selected', d => selection.has(d.id));
+    }
+
+    const composer = document.getElementById('composer');
+    const list = document.getElementById('selection-list');
+    const btnAsk = document.getElementById('btn-ask');
+    const status = document.getElementById('composer-status');
+
+    if (selection.size === 0) {
+      composer.classList.remove('visible');
+      btnAsk.disabled = true;
+      list.innerHTML = '';
+      status.textContent = '';
+      status.className = 'composer-status';
+      return;
+    }
+
+    composer.classList.add('visible');
+
+    list.innerHTML = '';
+    for (const id of selection) {
+      const node = nodesById.get(id);
+      if (!node) continue;
+      const chip = document.createElement('div');
+      chip.className = 'selection-chip';
+      chip.innerHTML = `
+        <span class="dot" style="background:var(--cat-${node.category || 'doc'})"></span>
+        <span class="chip-name">${escapeHtml(node.conceptName || '—')}</span>
+        <span class="chip-path">${escapeHtml(node.path || '')}</span>
+      `;
+      list.appendChild(chip);
+    }
+
+    updateAskButtonState();
+  }
+
+  function updateAskButtonState() {
+    const text = document.getElementById('composer-input').value.trim();
+    document.getElementById('btn-ask').disabled = (selection.size === 0 || text === '');
+  }
+
+  function escapeHtml(s) {
+    return String(s)
+      .replace(/&/g, '&amp;')
+      .replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;')
+      .replace(/"/g, '&quot;')
+      .replace(/'/g, '&#39;');
+  }
+
+  document.getElementById('composer-input').addEventListener('input', updateAskButtonState);
+
+  document.getElementById('btn-cancel').addEventListener('click', () => {
+    selection.clear();
+    document.getElementById('composer-input').value = '';
+    renderSelectionUI();
+  });
+
+  document.getElementById('btn-ask').addEventListener('click', sendToServer);
+
+  document.getElementById('composer-input').addEventListener('keydown', e => {
+    // Cmd/Ctrl+Enter sends
+    if ((e.metaKey || e.ctrlKey) && e.key === 'Enter') {
+      e.preventDefault();
+      const btn = document.getElementById('btn-ask');
+      if (!btn.disabled) sendToServer();
+    }
+  });
+
+  async function sendToServer() {
+    const status = document.getElementById('composer-status');
+    const btnAsk = document.getElementById('btn-ask');
+    const input = document.getElementById('composer-input');
+
+    const question = input.value.trim();
+    if (!question || selection.size === 0) return;
+
+    const payload = {
+      question,
+      selection: Array.from(selection).map(id => {
+        const n = nodesById.get(id) || { id };
+        return { id: n.id, path: n.path, conceptName: n.conceptName };
+      })
+    };
+
+    btnAsk.disabled = true;
+    status.textContent = 'Sending…';
+    status.className = 'composer-status';
+
+    try {
+      const res = await fetch(`${SERVER_URL}/pending`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload)
+      });
+      if (!res.ok) {
+        const err = await res.json().catch(() => ({ error: `HTTP ${res.status}` }));
+        throw new Error(err.error || 'request failed');
+      }
+      status.textContent = 'Sent. Switch to your terminal and press Enter.';
+      status.className = 'composer-status success';
+      input.value = '';
+      selection.clear();
+      renderSelectionUI();
+      // Re-show success status — renderSelectionUI clears it
+      status.textContent = 'Sent. Switch to your terminal and press Enter.';
+      status.className = 'composer-status success';
+    } catch (err) {
+      // Server unreachable. Fall back to clipboard.
+      status.className = 'composer-status error';
+      const fallbackText = formatFallbackPrompt(payload);
+      try {
+        await navigator.clipboard.writeText(fallbackText);
+        status.textContent = "Server unreachable — prompt copied to clipboard. Paste it in your terminal.";
+      } catch (clipErr) {
+        status.textContent = "Server unreachable. Re-run /neural-map:map to restart it.";
+      }
+      btnAsk.disabled = false;
+    }
+  }
+
+  function formatFallbackPrompt(payload) {
+    const lines = [
+      `[Neural Map] ${payload.question}`,
+      '',
+      'Files in question:'
+    ];
+    for (const sel of payload.selection) {
+      lines.push(`- ${sel.path}${sel.conceptName ? ` ("${sel.conceptName}")` : ''}`);
+    }
+    return lines.join('\n');
+  }
+
   document.addEventListener('keydown', e => {
     if (e.key === 'Escape') {
       document.getElementById('detail-panel').classList.remove('visible');
+      // ESC also clears composer if focus is in textarea
+      if (document.activeElement === document.getElementById('composer-input')) {
+        document.getElementById('composer-input').blur();
+      }
     }
   });
 
