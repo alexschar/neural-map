@@ -1,5 +1,5 @@
 ---
-description: Generate a Neural Map visualization of the current project — each file labeled with a concept name and metaphor.
+description: Generate a Neural Map visualization of the current project — each file labeled as a role in a single project-level metaphor.
 allowed-tools: Bash, Read, Write
 ---
 
@@ -37,7 +37,43 @@ Each entry in `output.files` has:
 - `preview` — first 500 chars of content
 - `previewHash` — 8-char SHA1 of the preview (used for change detection)
 
-## Step 2: Generate concepts for each file
+## Step 2: Pick or carry-forward the project's world metaphor
+
+Read `.claude/neural-map/state.json` if it exists.
+
+**If state.json exists AND has a non-empty `worldMetaphor` field:** use it verbatim. Do not re-pick. Skip to Step 3 with the existing world. This is the stability promise — names don't shake between runs.
+
+**If state.json doesn't exist, or has no `worldMetaphor`:** pick one extended metaphor that the whole project will be named within. Write it as a single short phrase, like `"a theater production"` or `"a working kitchen"` or `"a starship in flight"`. Look at the file paths and the previews together to choose a world that has natural roles for the kinds of files present (entry points, business logic, data, UI, config, style, tests, docs).
+
+**World selection rules:**
+- Pick a world rich enough to have ~30 distinct natural roles. A theater has stage, lobby, box office, dressing room, marquee, lighting, props, ushers, the program, the dress rehearsal, the director's notes, the playbill — that's enough range. A "thermos" or "single shopping bag" wouldn't be.
+- Pick something concrete and physically inhabitable. The user is going to think *spatially* about their project. A "weather system" is weak (where's the entry point?). A "newspaper office" is strong (front desk, the press room, the morgue, the editor's desk).
+- Don't try to match the project's literal domain. A music app does NOT need to be a "concert hall." Pick the world that has the best *roles*, not the closest theme. A theater works for almost anything.
+- Avoid worlds that map awkwardly to data files. If you're tempted to name a database schema "the moon" or "the wind" because your world is celestial, the world is wrong — pick a different one.
+
+**Anchor worlds — pick from these unless you have a strong reason to invent a new one:**
+
+| World | Strong for | Example roles available |
+|---|---|---|
+| `a theater production` | most projects | stage, lobby, marquee, box office, dressing room, props, ushers, program, dress rehearsal, director's notes |
+| `a working kitchen` | data-heavy, async | walk-in, pantry, line, expediter, dish pit, ticket window, chef's notes, mise en place |
+| `a working newsroom` | content/CMS | front page, the wire, copy desk, fact-check, the morgue (archive), beat reporters, masthead |
+| `a starship in flight` | engineering-heavy | bridge, engine room, airlock, computer core, life support, comms, captain's log |
+| `a hotel front-of-house` | request/response | lobby, concierge, front desk, switchboard, housekeeping, room service, the safe |
+| `a small museum` | docs/reference | front entrance, exhibit halls, the gift shop, conservation lab, the catalog, docent notes |
+| `a working farm` | scheduled/cron | barn, field, greenhouse, silo, packing shed, the almanac, the chicken coop |
+| `a film set` | build pipelines | sound stage, craft services, wardrobe, the gaffer's truck, the dailies, the script |
+
+Once chosen, the world goes in `state.json` as:
+
+```json
+{
+  "worldMetaphor": "a theater production",
+  ...
+}
+```
+
+## Step 3: Generate concepts for each file as a role within the world
 
 For each file in the scanner output, generate a concept entry with this exact shape:
 
@@ -45,49 +81,86 @@ For each file in the scanner output, generate a concept entry with this exact sh
 {
   "id": "<id from scanner output — use verbatim, do not regenerate>",
   "path": "<path from scanner output>",
-  "size": <size in bytes from scanner output — copy verbatim>,
+  "size": <size from scanner output>,
+  "modified": "<modified from scanner output>",
   "previewHash": "<previewHash from scanner output — use verbatim>",
   "conceptName": "<2-4 evocative words, Title Case, ≤24 characters total>",
-  "metaphor": "<one short sentence — what this file IS, in plain language>",
+  "metaphor": "<one short sentence — what role this file plays in the chosen world>",
   "category": "<one of: entry, logic, data, ui, config, style, test, doc>",
   "weight": <integer 1-5 indicating how central this file is to the project>,
   "connections": ["<id of related file>", "..."]
 }
 ```
 
-`id`, `size`, and `previewHash` come from the scanner — copy them verbatim. Do not generate your own.
+`id`, `previewHash`, `size`, and `modified` come from the scanner — copy them verbatim. Do not generate your own.
+
+> **Why `size` and `modified` now appear in the concept entry:** the viewer reads them when populating the detail panel. v0.1 dropped these during merge, which is why the SIZE field showed an em dash. v0.2 fixes this by carrying them through.
 
 **Concept naming rules:**
-- The `conceptName` is poetic-but-clear. Avoid generic names like "Auth Module" or "Database Schema" — those defeat the entire point of this plugin.
-- **Hard length limit: 24 characters total.** SVG text doesn't wrap — names longer than 24 chars overflow the node visually. The viewer truncates defensively at render with an ellipsis, but plan inside the limit.
-- The `metaphor` is one sentence, written *as if explaining to a curious non-coder*. NOT "Validates JWT tokens against the auth provider." YES "Checks IDs at the door before letting requests inside."
-- Use the file's content (preview) AND its path to infer the role. A file named `auth.ts` containing JWT logic is "The Bouncer." A file named `auth.ts` containing a login UI is "The Front Desk."
-- **Stay inside one world.** Before naming individual files, glance over the full scanner output and pick a single extended metaphor that fits this project (e.g. a house, a theater, a workshop, a kitchen, a city). Then name every file as a part of *that* world — foundation, front door, wiring, dressing room. Don't mix worlds in one map: "The Bouncer" + "The Conductor" + "The Welcome Mat" reads as three unrelated metaphors. The same files named "The Front Door" + "The Foundation" + "The Welcome Mat" read as one house. The map is a place the user walks through, not a vocabulary list — the names should feel like they belong together.
 
-**Concept name examples by category — use these as anchors for the *level* you're aiming for:**
+- The `conceptName` is poetic-but-clear, **and belongs to the chosen world**. Every name in the project must be a role within `worldMetaphor`. Do not mix worlds. If `worldMetaphor` is "a theater production," every name comes from the theater — no kitchen roles, no spaceship roles.
+- **Hard length limit: 24 characters total.** SVG text doesn't wrap — names longer than 24 chars overflow the node. The viewer truncates defensively at render with an ellipsis.
+- The `metaphor` is one sentence that places this file *within the chosen world*. NOT "Validates JWT tokens against the auth provider." YES (in the theater world) "Checks tickets at the door before guests reach their seats." The metaphor sentence reads like a tour guide pointing at this part of the building.
+- Use the file's content (preview) AND its path to infer the role. A file named `auth.ts` containing JWT logic is "The Usher" in a theater. The same file containing a login UI is "The Box Office Window."
+
+**Concept name examples by category — three full example sets in three different worlds. Use these as anchors for the *level* of language and the *cohesion* you're aiming for.**
+
+### World: a theater production
 
 | Category | File | Concept Name | Metaphor |
 |---|---|---|---|
-| entry | `src/main.tsx` | The Front Door | Where every visitor first walks in. |
-| entry | `app/page.tsx` | The Lobby | The first room your users see. |
-| logic | `middleware/auth.ts` | The Bouncer | Checks IDs at the door before letting requests inside. |
-| logic | `services/payments.ts` | The Cashier | Counts the money and makes change. |
-| data | `db/schema.sql` | The Memory Vault | Where everything the app remembers gets locked away. |
-| data | `models/user.ts` | The Headshot | A passport photo for every user the system knows. |
-| ui | `components/Header.tsx` | The Marquee | The big sign at the top that tells you where you are. |
-| ui | `components/Card.tsx` | The Index Card | A small format the app uses to display anything once. |
-| config | `tsconfig.json` | The House Rules | What the building inspector reads before signing off. |
-| config | `vite.config.ts` | The Conductor | Tells the orchestra what order to play in. |
-| style | `tailwind.config.js` | The Wardrobe | Every outfit the app is allowed to wear. |
-| style | `theme.css` | Stage Lights | The mood the app is set in. |
-| test | `auth.spec.ts` | The Inspector | Comes by once a week to check nothing's broken. |
-| test | `e2e/checkout.test.ts` | The Dress Rehearsal | Walks through the whole show before opening night. |
-| doc | `README.md` | The Welcome Mat | The first thing visitors read. |
-| doc | `ARCHITECTURE.md` | The Blueprint | The drawings the contractors work from. |
+| entry | `src/main.tsx` | The House Lights | When the theater opens its doors for the night. |
+| entry | `app/page.tsx` | The Lobby | The first room your audience steps into. |
+| logic | `middleware/auth.ts` | The Usher | Checks tickets before letting people into the seats. |
+| logic | `services/payments.ts` | The Box Office | Where every transaction at the door is handled. |
+| data | `db/schema.sql` | The Archive Room | Where every program from every show is filed. |
+| data | `models/user.ts` | The Patron Card | What the theater remembers about each ticket-holder. |
+| ui | `components/Header.tsx` | The Marquee | The lit-up sign above the entrance. |
+| ui | `components/Card.tsx` | The Playbill | A small format the theater uses for any production. |
+| config | `tsconfig.json` | The House Rules | The codes the building inspector signs off on. |
+| config | `vite.config.ts` | The Stage Manager | Coordinates who moves what when. |
+| style | `tailwind.config.js` | The Costume Closet | Every outfit any actor is allowed to wear. |
+| style | `theme.css` | Stage Lighting | The mood every scene gets bathed in. |
+| test | `auth.spec.ts` | The Dress Rehearsal | A full run before opening night to catch what's broken. |
+| test | `e2e/checkout.test.ts` | Tech Week | Every system tested before paying audiences arrive. |
+| doc | `README.md` | The Program | What every audience member reads before the show starts. |
+| doc | `ARCHITECTURE.md` | Director's Notes | The script the production was actually built from. |
 
-These are anchors, not a lookup table. A new project will have files that don't match any of these — you're calibrating *the level of language*, not pattern-matching to fixed names.
+### World: a working kitchen
 
-**Category mapping:**
+| Category | File | Concept Name | Metaphor |
+|---|---|---|---|
+| entry | `src/main.tsx` | The Service Window | Where every order enters the kitchen. |
+| logic | `middleware/auth.ts` | The Expediter | Checks every ticket before it goes to the line. |
+| logic | `services/payments.ts` | The Cashier | Where the bill gets settled at the end of the meal. |
+| data | `db/schema.sql` | The Walk-In | Where every ingredient and recipe is stored cold. |
+| data | `models/user.ts` | The Regular's Card | What the kitchen remembers about each diner. |
+| ui | `components/Header.tsx` | The Chalkboard | What's on offer tonight, written above the pass. |
+| ui | `components/Card.tsx` | The Order Ticket | The standard format every order is written on. |
+| config | `tsconfig.json` | The Health Code | The rules the inspector checks every visit. |
+| style | `theme.css` | The Atmosphere | Soft lighting, warm music, the mood the room is set in. |
+| test | `auth.spec.ts` | The Tasting | The chef tries every dish before service begins. |
+| doc | `README.md` | The Menu | What every guest looks at first. |
+| doc | `ARCHITECTURE.md` | The Mise en Place | What was prepped before service to make everything work. |
+
+### World: a starship in flight
+
+| Category | File | Concept Name | Metaphor |
+|---|---|---|---|
+| entry | `src/main.tsx` | The Airlock | The only way aboard the ship. |
+| logic | `middleware/auth.ts` | Security Clearance | Verifies credentials at the airlock. |
+| logic | `services/payments.ts` | The Quartermaster | Logs every supply transaction in the ledger. |
+| data | `db/schema.sql` | The Computer Core | The ship's long-term memory bank. |
+| ui | `components/Header.tsx` | The Bridge HUD | What the captain reads during every shift. |
+| config | `tsconfig.json` | Operations Manual | The protocols every crew member is trained on. |
+| style | `theme.css` | Running Lights | The visual personality of the hull at night. |
+| test | `auth.spec.ts` | Pre-Flight Check | Every system tested before launch. |
+| doc | `README.md` | Welcome Aboard | First thing handed to new crew. |
+| doc | `ARCHITECTURE.md` | The Schematics | The blueprints engineering works from. |
+
+These are anchors, not lookup tables. Your project will have files that don't match these examples one-for-one — you're calibrating the *level of language* AND the *cohesion of the world*, not pattern-matching to fixed names.
+
+**Category mapping (unchanged from v0.1):**
 - `entry` — main entry points, top-level routes
 - `logic` — business logic, services, controllers, middleware
 - `data` — schemas, models, migrations, fixtures
@@ -97,61 +170,82 @@ These are anchors, not a lookup table. A new project will have files that don't 
 - `test` — test files
 - `doc` — markdown, READMEs, specs
 
-**Weight rule:**
+**Weight rule (unchanged):**
 - 5 = central — the project doesn't make sense without this file
 - 3 = important supporting file
 - 1 = peripheral utility
 
-**Connections:**
+**Connections (unchanged):**
 - For each file, identify 1–3 other files it directly relates to (imports, references, extends). Use their `id` values.
 
-## Step 3: Merge with existing state
+## Step 4: Merge with existing state
 
-If `.claude/neural-map/state.json` already exists, read it. Otherwise, treat existing state as `{ nodes: [] }`.
+If `.claude/neural-map/state.json` already exists, read it. Otherwise treat existing state as `{ worldMetaphor: "<from Step 2>", nodes: [] }`.
 
 **Merge rules — apply per file from the scanner output:**
 
 For each scanner entry, look up the existing node by `id`:
 
-1. **No existing node (new file):** generate the full concept entry from scratch, including `conceptName`, `metaphor`, `category`, `weight`, `connections`.
-2. **Existing node, `previewHash` matches scanner's `previewHash`:** the file's content is materially unchanged. **Preserve the existing `conceptName`, `metaphor`, `category`, and `weight` verbatim.** Update only `path` (in case of rename), `size`, `modified`, `previewHash` (same value), and `connections` (which can shift as the project's other files change).
-3. **Existing node, `previewHash` differs:** the file has materially changed. Regenerate `conceptName`, `metaphor`, `category`, `weight`, and `connections` from scratch — the previous concept may no longer fit.
+1. **No existing node (new file):** generate the full concept entry from scratch within the locked world.
+2. **Existing node, `previewHash` matches scanner's `previewHash`:** the file's content is materially unchanged. **Preserve the existing `conceptName`, `metaphor`, `category`, and `weight` verbatim.** Update `path` (in case of rename), `size`, `modified`, `previewHash` (same value), and `connections`.
+3. **Existing node, `previewHash` differs:** the file has materially changed. Regenerate `conceptName`, `metaphor`, `category`, `weight`, and `connections` — but the new name must still be a role within the **locked** `worldMetaphor`. The world doesn't change; the role within it can.
 
-For nodes in existing state whose `id` doesn't appear in the current scan (file deleted or no longer in the recent-30): set `archived: true` rather than removing the entry. Don't generate concepts for archived nodes.
+For nodes in existing state whose `id` doesn't appear in the current scan: set `archived: true` rather than removing the entry.
 
-**Why this matters:** the `conceptName` is the user's mental anchor. If "The Bouncer" silently becomes "The Gatekeeper" between two runs with no code change, the user loses trust in every name in the map. The `previewHash` check makes name stability a property of the system, not a hopeful behavior.
+**Why this matters:** the user's mental anchor is the combination of `worldMetaphor + conceptName`. Both must be stable across runs for unchanged files. v0.1's `previewHash` check made names stable. v0.2's `worldMetaphor` carry-forward makes the *world* stable. Together they're the trust contract.
 
-The state file shape:
+The state file shape (note the new top-level `worldMetaphor` and `version` bump):
 
 ```json
 {
-  "version": "0.1.0",
+  "version": "0.2.0",
   "generated": "<ISO timestamp>",
   "projectName": "<directory name of cwd>",
+  "worldMetaphor": "<chosen or carried-forward world>",
   "nodes": [/* concept entries, including any archived ones */]
 }
 ```
 
-## Step 4: Write the state file
+## Step 5: Write the state file
 
 Use the Write tool to save the merged state to `.claude/neural-map/state.json`. Create the directory if it doesn't exist.
 
-## Step 5: Render the viewer
+## Step 6: Render the viewer
 
-The viewer template lives at `${CLAUDE_PLUGIN_ROOT}/viewer/template.html` and contains the literal token `__NEURAL_MAP_STATE__` where state should be inlined. To produce a working viewer for this project:
+The viewer template lives at `${CLAUDE_PLUGIN_ROOT}/viewer/template.html` and contains the literal token `__NEURAL_MAP_STATE__` where state should be inlined. To produce a working viewer:
 
 1. **Read** the template: `Read ${CLAUDE_PLUGIN_ROOT}/viewer/template.html`
-2. **Serialize** the merged state from Step 4 to a JSON string. **Then escape every occurrence of `</` to `<\/` in that string.** This is required, not optional — any preview field containing `</script>` (which will happen on any project with HTML or JS source files) will close the inline `<script>` tag prematurely and the viewer will load empty. The escape is a single string replacement before token substitution.
-3. **Replace** the token `__NEURAL_MAP_STATE__` with the escaped JSON string. Use a single global replacement; the token only appears once.
-4. **Write** the result to `.claude/neural-map/index.html` in the user's project (NOT in the plugin folder). This is the per-project rendered file.
+2. **Serialize** the merged state from Step 5 to a JSON string. **Then escape every occurrence of `</` to `<\/` in that string.** This is required, not optional — any preview field containing `</script>` will close the inline `<script>` tag prematurely.
+3. **Replace** the token `__NEURAL_MAP_STATE__` with the escaped JSON string.
+4. **Write** the result to `.claude/neural-map/index.html` in the user's project (NOT in the plugin folder).
 
-Use the Write tool for step 4. Create the directory if it doesn't exist (it should already exist from the state.json write earlier).
+> **Why the `</` escape is non-negotiable:** the JSON sits inside a `<script>` tag. The HTML parser, not the JS parser, decides where the script tag ends. It looks for the literal substring `</script` (case-insensitive, anywhere). Escaping `</` to `<\/` is invisible to the JSON parser (since `\/` is a legal JSON escape for `/`) but breaks the HTML parser's match.
 
-> **Why the `</` escape is non-negotiable:** the JSON sits inside a `<script>` tag in the rendered HTML. The browser's HTML parser, not the JS parser, decides where the script tag ends. It looks for the literal substring `</script` (case-insensitive, in any context including string literals). Escaping `</` to `<\/` is invisible to the JSON parser (since `\/` is a legal JSON escape for `/`) but breaks the HTML parser's match. This is a well-known XSS-adjacent footgun. Skip the escape and the viewer fails silently on most real projects.
+## Step 7: Restart the writer server
 
-## Step 6: Open the rendered viewer
+The writer server is the bridge that lets the canvas write pending requests to disk. The viewer fetches `http://localhost:3737` to send selections + questions; the server writes them to `.claude/neural-map/pending.json`; the UserPromptSubmit hook reads that file on the user's next prompt.
 
-The path here is **the user's project**, not the plugin root. Use `.claude/neural-map/index.html` relative to the user's cwd.
+Before opening the viewer, restart the writer server so the latest version runs:
+
+```bash
+# Kill any prior server instance using its PID file
+if [ -f .claude/neural-map/server.pid ]; then
+  kill "$(cat .claude/neural-map/server.pid)" 2>/dev/null || true
+  rm -f .claude/neural-map/server.pid
+fi
+
+# Spawn fresh server, detached so it survives the slash command exiting
+nohup node "${CLAUDE_PLUGIN_ROOT}/scripts/writer-server.js" \
+  > .claude/neural-map/server.log 2>&1 &
+echo $! > .claude/neural-map/server.pid
+disown 2>/dev/null || true
+```
+
+The server runs zero-dep Node, listens on `localhost:3737`, and accepts only `POST /pending` and `GET /health`. Full spec in `09-writer-server.md`.
+
+> **Why detached:** the slash command terminates after returning. If the server were a child of the slash command's process tree it would die with it. `nohup ... &` plus `disown` decouples it from the terminal session so it survives.
+
+## Step 8: Open the rendered viewer
 
 ```bash
 # macOS
@@ -164,16 +258,15 @@ open .claude/neural-map/index.html
 # start .claude/neural-map/index.html
 ```
 
-Detect the OS first and pick the right command. If `open` fails, try `xdg-open`, then `start`.
+Detect OS and pick the right command. Path is **the user's project**, not the plugin root.
 
-> **Why this path matters:** opening `${CLAUDE_PLUGIN_ROOT}/viewer/template.html` would show the user the unrendered template with the literal string `__NEURAL_MAP_STATE__` in it. The rendered file in the user's project is the only viewer they should ever see.
-
-## Step 7: Tell the user what you did
+## Step 9: Tell the user what you did
 
 Report briefly:
-- How many files you mapped
-- A few of the most interesting concept names you generated (2-3 examples)
-- The path to the state file
-- That the viewer should now be open in their browser
+- The chosen `worldMetaphor` (e.g. "Mapped as a theater production")
+- Whether it was newly picked or carried forward from a prior run
+- How many files were mapped, plus 2–3 of the most interesting role names
+- That the viewer is open and the Ask button is wired to inject prompts on next terminal turn
+- The path to `state.json`
 
-Do NOT dump the full state.json contents into the chat. The viewer is the output, not the chat.
+Do NOT dump the full state.json contents into the chat. The viewer is the output.
