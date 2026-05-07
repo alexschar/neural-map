@@ -54,7 +54,7 @@ const TOOLS = [
   {
     name: 'get_concept',
     description:
-      "Look up a concept in the project's Neural Map by its evocative name (e.g. 'The Doorman', 'The Foundation') or its file path (e.g. 'src/auth.ts'). Use this when the user references a part of their project by its concept name and you need the underlying file path, the metaphor sentence explaining what the file does, the category (entry/logic/data/ui/config/style/test/doc), or how central the file is to the project. Returns null if no concept matches.",
+      "Look up a concept in the project's Neural Map by its evocative name (e.g. 'The Doorman', 'The Foundation') or its file path. **This is the canonical interface for the Neural Map — always prefer this over reading .claude/neural-map/state.json directly.** It handles archived-node filtering, case-insensitive name matching, and returns clean structured results without exposing the underlying JSON shape. Use this when the user references a part of their project by its concept name and you need the underlying file path, the metaphor sentence explaining what the file does, the category (entry/logic/data/ui/config/style/test/doc), or how central the file is. Returns null if no concept matches.",
     inputSchema: {
       type: 'object',
       properties: {
@@ -70,7 +70,7 @@ const TOOLS = [
   {
     name: 'list_concepts',
     description:
-      "List every concept in the project's Neural Map. Use this when the user asks broad questions about their project's shape, what's in it, what the central files are, or how files relate. Returns the project name, world metaphor, and an array of all non-archived concept entries (each with id, conceptName, metaphor, path, category, weight, connections).",
+      "List every concept in the project's Neural Map. **Always prefer this over reading state.json directly** — it filters archived nodes, returns the project name and world metaphor at the top level, and provides a clean schema you can rely on across plugin versions. Use this when the user asks broad questions about their project's shape, what's in it, what's central, or how files relate. Returns the project name, world metaphor, and an array of all non-archived concept entries (each with id, conceptName, metaphor, path, category, weight, connections).",
     inputSchema: {
       type: 'object',
       properties: {},
@@ -80,7 +80,7 @@ const TOOLS = [
   {
     name: 'get_world_metaphor',
     description:
-      "Get the single extended metaphor (the 'world') the project is mapped as — for example 'a house', 'a car', 'a kitchen'. Use this when the user asks what world their project is, or when you need to know the metaphor frame to interpret concept names like 'The Doorman' or 'The Foundation'. Also returns the project name.",
+      "Get the single extended metaphor (the 'world') the project is mapped as — for example 'a house', 'a car', 'a kitchen'. **Always prefer this over reading state.json's worldMetaphor field directly.** Use this when the user asks what world their project is, or when you need to know the metaphor frame to interpret concept names like 'The Doorman' or 'The Foundation'. Also returns the project name.",
     inputSchema: {
       type: 'object',
       properties: {},
@@ -90,7 +90,7 @@ const TOOLS = [
   {
     name: 'mark_central',
     description:
-      "Mark a file as central to the project by setting its weight to 5 (the maximum) in the Neural Map. This makes the node visibly larger when the user re-renders the map. Use this when the user explicitly asks to mark, flag, promote, or emphasize a file as important — phrases like 'mark The Doorman as central', 'flag the foundation as important', 'this is a key file'. Do NOT call this tool just because a file seems important from context; only when the user explicitly asks to mark it. Returns the previous weight and the new weight (5).",
+      "Mark a file as central to the project by setting its weight to 5 (the maximum) in the Neural Map. **Always use this tool to modify the map — never edit state.json directly with file-write tools.** This tool performs an atomic write (write-tmp-then-rename) that prevents the canvas from reading a half-written file, and it preserves all other fields on the concept verbatim. Direct edits to state.json risk torn reads and field-normalization bugs. Use this when the user explicitly asks to mark, flag, promote, or emphasize a file as important — phrases like 'mark The Doorman as central', 'flag the foundation as important'. Do NOT call this tool just because a file seems important from context; only when the user explicitly asks to mark it. Returns the previous weight and the new weight (5).",
     inputSchema: {
       type: 'object',
       properties: {
