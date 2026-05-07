@@ -1,13 +1,13 @@
 #!/usr/bin/env node
 
 /**
- * Neural Map — MCP Server (stub)
+ * Neural Map — MCP Server
  *
  * Stdio JSON-RPC 2.0 server speaking MCP protocol version 2024-11-05.
  * Spawned by Claude Code as a child process per .mcp.json at plugin root.
  *
- * v0.3.0 step 3.1: handshake-only stub. tools/list returns []. tools/call
- * returns method-not-found. Step 3.2 will populate the real read tools.
+ * v0.3.0 step 3.2: read tools (get_concept, list_concepts, get_world_metaphor)
+ * read .claude/neural-map/state.json from the user's project (process.cwd()).
  *
  * Wire protocol: line-delimited JSON-RPC. One complete JSON message per line
  * on stdin; one response line per request on stdout. Stdout is the protocol
@@ -17,6 +17,8 @@
  */
 
 const readline = require('readline');
+const fs = require('fs');
+const path = require('path');
 
 const PROTOCOL_VERSION = '2024-11-05';
 const SERVER_NAME = 'neural-map-mcp';
@@ -46,6 +48,154 @@ function logErr(...args) {
   process.stderr.write('[neural-map-mcp] ' + args.join(' ') + '\n');
 }
 
+// ---- Tool definitions ----
+
+const TOOLS = [
+  {
+    name: 'get_concept',
+    description:
+      "Look up a concept in the project's Neural Map by its evocative name (e.g. 'The Doorman', 'The Foundation') or its file path (e.g. 'src/auth.ts'). Use this when the user references a part of their project by its concept name and you need the underlying file path, the metaphor sentence explaining what the file does, the category (entry/logic/data/ui/config/style/test/doc), or how central the file is to the project. Returns null if no concept matches.",
+    inputSchema: {
+      type: 'object',
+      properties: {
+        name_or_path: {
+          type: 'string',
+          description:
+            "Either a concept name (case-insensitive, e.g. 'the doorman') or an exact file path (e.g. 'middleware/auth.ts').",
+        },
+      },
+      required: ['name_or_path'],
+    },
+  },
+  {
+    name: 'list_concepts',
+    description:
+      "List every concept in the project's Neural Map. Use this when the user asks broad questions about their project's shape, what's in it, what the central files are, or how files relate. Returns the project name, world metaphor, and an array of all non-archived concept entries (each with id, conceptName, metaphor, path, category, weight, connections).",
+    inputSchema: {
+      type: 'object',
+      properties: {},
+      additionalProperties: false,
+    },
+  },
+  {
+    name: 'get_world_metaphor',
+    description:
+      "Get the single extended metaphor (the 'world') the project is mapped as — for example 'a house', 'a car', 'a kitchen'. Use this when the user asks what world their project is, or when you need to know the metaphor frame to interpret concept names like 'The Doorman' or 'The Foundation'. Also returns the project name.",
+    inputSchema: {
+      type: 'object',
+      properties: {},
+      additionalProperties: false,
+    },
+  },
+];
+
+// ---- State loading ----
+//
+// state.json lives in the user's project, not the plugin root. Claude Code
+// spawns the MCP server with cwd set to the project the user is working in.
+// We re-read on every tool call: the canvas (and Step 3.3's mark_central) may
+// have written new state since the last call.
+
+function statePath() {
+  return path.join(process.cwd(), '.claude', 'neural-map', 'state.json');
+}
+
+function toolErr(text) {
+  return { content: [{ type: 'text', text }], isError: true };
+}
+
+function toolOk(payload) {
+  return {
+    content: [{ type: 'text', text: JSON.stringify(payload) }],
+  };
+}
+
+function toolText(text) {
+  return { content: [{ type: 'text', text }] };
+}
+
+function loadState() {
+  const p = statePath();
+  if (!fs.existsSync(p)) {
+    return {
+      err: toolErr(
+        'No Neural Map exists for this project yet. Run /neural-map:map in your Claude Code session to generate one.'
+      ),
+    };
+  }
+  let raw;
+  try {
+    raw = fs.readFileSync(p, 'utf8');
+  } catch (err) {
+    return {
+      err: toolErr('state.json could not be read: ' + (err.message || String(err))),
+    };
+  }
+  let state;
+  try {
+    state = JSON.parse(raw);
+  } catch (err) {
+    return {
+      err: toolErr('state.json is malformed. Re-run /neural-map:map to regenerate.'),
+    };
+  }
+  return { state };
+}
+
+function nonArchived(nodes) {
+  return (nodes || []).filter((n) => !n.archived);
+}
+
+// ---- Tool implementations ----
+
+function toolGetConcept(args) {
+  const query = args && args.name_or_path;
+  if (typeof query !== 'string' || query.length === 0) {
+    return toolErr("get_concept requires a 'name_or_path' string argument.");
+  }
+  const { state, err } = loadState();
+  if (err) return err;
+  const candidates = nonArchived(state.nodes);
+  const byPath = candidates.find((n) => n.path === query);
+  if (byPath) return toolOk(byPath);
+  const lower = query.toLowerCase();
+  const byName = candidates.find(
+    (n) => typeof n.conceptName === 'string' && n.conceptName.toLowerCase() === lower
+  );
+  if (byName) return toolOk(byName);
+  return toolText(`No concept matches '${query}'.`);
+}
+
+function toolListConcepts(_args) {
+  const { state, err } = loadState();
+  if (err) return err;
+  return toolOk({
+    projectName: state.projectName,
+    worldMetaphor: state.worldMetaphor,
+    concepts: nonArchived(state.nodes),
+  });
+}
+
+function toolGetWorldMetaphor(_args) {
+  const { state, err } = loadState();
+  if (err) return err;
+  if (!state.worldMetaphor) {
+    return toolText(
+      'This Neural Map was generated before v0.2 (no world metaphor was assigned). Run /neural-map:map to regenerate with a world metaphor.'
+    );
+  }
+  return toolOk({
+    projectName: state.projectName,
+    worldMetaphor: state.worldMetaphor,
+  });
+}
+
+const TOOL_HANDLERS = {
+  get_concept: toolGetConcept,
+  list_concepts: toolListConcepts,
+  get_world_metaphor: toolGetWorldMetaphor,
+};
+
 // ---- Method handlers ----
 
 function handleInitialize(id, _params) {
@@ -62,22 +212,23 @@ function handleInitialize(id, _params) {
 }
 
 function handleToolsList(id, _params) {
-  sendResult(id, { tools: [] });
+  sendResult(id, { tools: TOOLS });
 }
 
 function handleToolsCall(id, params) {
   const name = params && params.name ? params.name : '(unnamed)';
-  // Stub: no tools registered yet. Return a tool-spec error result so a
-  // calling client gets a structured response rather than a transport error.
-  sendResult(id, {
-    isError: true,
-    content: [
-      {
-        type: 'text',
-        text: `Tool not found: ${name}. The Neural Map MCP server has no tools registered yet (v0.3.0 step 3.1 stub).`,
-      },
-    ],
-  });
+  const args = (params && params.arguments) || {};
+  const handler = TOOL_HANDLERS[name];
+  if (!handler) {
+    sendResult(id, toolErr(`Tool not found: ${name}.`));
+    return;
+  }
+  try {
+    sendResult(id, handler(args));
+  } catch (err) {
+    logErr('tool', name, 'threw -', err && err.message ? err.message : err);
+    sendResult(id, toolErr(`Tool '${name}' failed: ${err && err.message ? err.message : 'unknown error'}`));
+  }
 }
 
 // ---- Dispatch ----
