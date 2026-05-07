@@ -1,0 +1,16 @@
+{
+  "description": "Bridges Neural Map canvas requests into Claude prompts via UserPromptSubmit",
+  "hooks": {
+    "UserPromptSubmit": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "node ${CLAUDE_PLUGIN_ROOT}/hooks/inject-pending.js",
+            "timeout": 5
+          }
+        ]
+      }
+    ]
+  }
+}
