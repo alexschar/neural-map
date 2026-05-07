@@ -330,7 +330,7 @@
   }
   #composer .btn-ask:hover { background: #7eedff; }
   #composer .btn-ask:disabled {
-    background: rgba(93, 230, 255, 0.3);
+    opacity: 0.4;
     cursor: not-allowed;
   }
   #composer .btn-cancel {
@@ -668,13 +668,13 @@
         const err = await res.json().catch(() => ({ error: `HTTP ${res.status}` }));
         throw new Error(err.error || 'request failed');
       }
-      status.textContent = 'Sent. Switch to your terminal and press Enter.';
+      status.textContent = "Sent. In your terminal, type any prompt (e.g. 'go') and press Enter.";
       status.className = 'composer-status success';
       input.value = '';
       selection.clear();
       renderSelectionUI();
       // Re-show success status — renderSelectionUI clears it
-      status.textContent = 'Sent. Switch to your terminal and press Enter.';
+      status.textContent = "Sent. In your terminal, type any prompt (e.g. 'go') and press Enter.";
       status.className = 'composer-status success';
     } catch (err) {
       // Server unreachable. Fall back to clipboard.
