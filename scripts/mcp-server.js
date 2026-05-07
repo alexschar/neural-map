@@ -87,6 +87,22 @@ const TOOLS = [
       additionalProperties: false,
     },
   },
+  {
+    name: 'mark_central',
+    description:
+      "Mark a file as central to the project by setting its weight to 5 (the maximum) in the Neural Map. This makes the node visibly larger when the user re-renders the map. Use this when the user explicitly asks to mark, flag, promote, or emphasize a file as important — phrases like 'mark The Doorman as central', 'flag the foundation as important', 'this is a key file'. Do NOT call this tool just because a file seems important from context; only when the user explicitly asks to mark it. Returns the previous weight and the new weight (5).",
+    inputSchema: {
+      type: 'object',
+      properties: {
+        concept_id: {
+          type: 'string',
+          description:
+            "The id of the concept to mark central. Get this from get_concept or list_concepts — it's the 'id' field on each concept entry.",
+        },
+      },
+      required: ['concept_id'],
+    },
+  },
 ];
 
 // ---- State loading ----
@@ -190,10 +206,62 @@ function toolGetWorldMetaphor(_args) {
   });
 }
 
+// Atomic write: write to .tmp, rename over the target. fs.renameSync is
+// atomic on POSIX filesystems, so a concurrent reader (the canvas) sees
+// either the prior complete file or the new complete file — never a torn read.
+function atomicWriteState(state) {
+  const target = statePath();
+  const tmp = path.join(path.dirname(target), 'state.json.tmp');
+  try {
+    fs.writeFileSync(tmp, JSON.stringify(state, null, 2));
+    fs.renameSync(tmp, target);
+  } catch (err) {
+    try { fs.unlinkSync(tmp); } catch (_) { /* best effort cleanup */ }
+    throw err;
+  }
+}
+
+function toolMarkCentral(args) {
+  const conceptId = args && args.concept_id;
+  if (typeof conceptId !== 'string' || conceptId.length === 0) {
+    return toolErr("mark_central requires a 'concept_id' string argument.");
+  }
+  const { state, err } = loadState();
+  if (err) return err;
+  const node = (state.nodes || []).find((n) => n.id === conceptId);
+  if (!node) {
+    return toolErr(
+      `No concept with id '${conceptId}' found. Use list_concepts to see available ids.`
+    );
+  }
+  if (node.archived) {
+    return toolErr(
+      `Concept '${node.conceptName}' is archived and cannot be marked.`
+    );
+  }
+  const before = node.weight;
+  node.weight = 5;
+  try {
+    atomicWriteState(state);
+  } catch (writeErr) {
+    return toolErr(
+      'Failed to write state.json: ' + (writeErr.message || String(writeErr))
+    );
+  }
+  return toolOk({
+    success: true,
+    concept_id: conceptId,
+    conceptName: node.conceptName,
+    before,
+    after: 5,
+  });
+}
+
 const TOOL_HANDLERS = {
   get_concept: toolGetConcept,
   list_concepts: toolListConcepts,
   get_world_metaphor: toolGetWorldMetaphor,
+  mark_central: toolMarkCentral,
 };
 
 // ---- Method handlers ----
