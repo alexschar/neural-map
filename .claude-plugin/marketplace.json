@@ -12,7 +12,7 @@
         "repo": "alexschar/neural-map"
       },
       "description": "Visualize your Claude Code project as a navigable concept map. Each file gets a simplified name and metaphor instead of raw filenames.",
-      "version": "0.1.0",
+      "version": "0.3.0",
       "category": "visualization",
       "tags": ["context", "organization", "visualization"]
     }
