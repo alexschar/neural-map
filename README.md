@@ -1,22 +1,22 @@
 # Neural Map
 
-> Visualize your Claude Code project as a navigable concept map. Each file gets a simplified name and metaphor instead of raw filenames.
+> Your project becomes a place you can walk through. Every file is a room, a door, or a piece of wiring — all belonging to one coherent world.
 
-![Neural Map screenshot](docs/screenshot.png)
+![Neural Map screenshot](docs/NeuralMap_ReadmeImage0.2.1.jpg)
 
-AI-assisted projects produce more code than you can hold a mental model of. Neural Map captures your most recently-touched project files and labels each with a 2–4 word concept name and a one-sentence metaphor — so `scripts/scan.js` becomes "The Census Taker — walks every room of the house, writes down who lives where and how recently they moved in."
+AI-assisted projects produce more code than you can hold a mental model of. Neural Map captures the files you're actively working on and labels each one as a part of a single, universal metaphor — not a random pile of clever names.
 
-It's a Claude Code plugin. The same model that's writing your code does the labeling.
+If your project is a house: `auth.ts` is the doorman, `db/schema.sql` is the foundation, `theme.css` is the lighting. If it's a car: `main.tsx` is the ignition, `middleware/` is the dashboard, `tests/` is the test drive. The plugin picks the world. You walk through it.
 
 ## Demo
 
-![Demo](docs/demo.gif)
+![Demo](docs/demov0.2.1.gif)
 
 ## Install
 
 ```
 /plugin marketplace add alexschar/neural-map
-/plugin install neural-map@alexschar
+/plugin install neural-map
 /reload-plugins
 ```
 
@@ -28,47 +28,55 @@ In any project:
 /neural-map:map
 ```
 
-Claude scans the most-recently-modified files in your project, generates concept names and metaphors for each, writes the result to `.claude/neural-map/state.json`, and opens the visualization in your browser.
+Claude scans the most-recently-modified files in your project, picks one universal world that fits the project's shape (a house, a car, a kitchen, a garden, a workshop...), names every file as a role within that world, and opens the visualization in your browser.
+
+The world is locked the first time. Re-runs preserve names of files that haven't materially changed — your "front door" stays the front door across sessions.
+
+## Talk to the map
+
+Click any node — or shift-click for several — to select. Type a question in the composer panel, click Ask. Then in your terminal, type any prompt (e.g. "go") and press Enter. Your next prompt arrives in Claude with the selected files and your question already in context.
+
+This is the actual feature: your visualization isn't a passive picture. It's a remote control for your conversation.
 
 ## What you get
 
-- A force-directed graph of your project, color-coded by category (Entry, Logic, Data, UI, Config, Style, Test, Doc)
-- Each node sized by how central the file is to the project
+- A force-directed graph of your project under one universal metaphor
+- Concept names that bridge metaphor and function — *"The doorman of your app — checks every visitor's keys before letting them past the foyer."*
+- Each node sized by how central the file is to the project, color-coded by category (Entry, Logic, Data, UI, Config, Style, Test, Doc)
 - Click any node for the filepath, full metaphor, and stats
-- A self-contained HTML file written to `.claude/neural-map/index.html` — share it, archive it, version it
+- Shift-click to multi-select; send the selection to your Claude Code session as context with one click
+- A self-contained HTML file at `.claude/neural-map/index.html` — share it, archive it, version it
 
-## Example output
-
-Run on this repo (a small Claude Code plugin), Neural Map produced:
+## Example: this repo, mapped as a workshop
 
 | File | Concept name | Metaphor |
 |---|---|---|
-| `commands/map.md` | The Director's Notes | The script the director hands the cast — every cue, every scene, in order. |
-| `scripts/scan.js` | The Census Taker | Walks every room of the house, writes down who lives where and how recently they moved in. |
-| `viewer/template.html` | The Display Case | The empty glass case the museum drops the day's exhibit into. |
-| `.claude-plugin/marketplace.json` | The Storefront Sign | The sign hung above the shop door so passersby know what's sold inside. |
-| `.gitignore` | The Do-Not-Pack List | The note on the fridge listing what not to bring on the trip. |
-| `LICENSE` | The Permission Slip | The signed permission slip from school — what kids are and aren't allowed to do. |
+| `commands/map.md` | The Master Plan | The master plan of your plugin — every step the apprentice follows on the day's job. |
+| `scripts/scan.js` | The Inventory Clerk | The inventory clerk of your plugin — walks the shelves and writes down what's in stock and how recently it moved. |
+| `viewer/template.html` | The Display Window | The display window of your plugin — where today's finished work goes on view for visitors. |
+| `scripts/writer-server.js` | The Carrier Pigeon | The carrier pigeon of your plugin — runs every message from the workshop floor up to the foreman's office. |
+| `hooks/inject-pending.js` | The Foreman's Slip | The foreman's slip of your plugin — the note handed off to the next worker so they know what's just been asked. |
+| `.claude-plugin/marketplace.json` | The Storefront Sign | The storefront sign of your plugin — what passersby read before deciding to step inside. |
+| `LICENSE` | The Operating Permit | The operating permit of your plugin — the paperwork that says you're allowed to be in business. |
 
 ## What this is not (yet)
 
-- ❌ Real-time updates (re-run `/neural-map:map` to refresh)
 - ❌ Drag-to-connect node editing
 - ❌ Editable concept names from the viewer
+- ❌ Real-time sync as Claude edits files
 - ❌ Multi-project workspace view
 
 These are on the roadmap. See [issues](https://github.com/alexschar/neural-map/issues) for status, or open a feature request.
 
 ## How it works
 
-The plugin is a single slash command that:
+1. A zero-dependency Node scanner lists the 30 most-recently-modified text files in the project
+2. The slash command picks one universal world that fits the project's shape, then names every file as a role within that world
+3. State is written to `.claude/neural-map/state.json`, merged with prior runs to keep names stable
+4. A self-contained HTML viewer is rendered with state inlined and opened in your browser
+5. A tiny localhost writer-server lets the canvas POST selections back to your Claude Code session via a `UserPromptSubmit` hook, so clicking nodes and asking questions injects directly into your next prompt
 
-1. Runs a zero-dependency Node scanner to list the 30 most-recently-modified text files
-2. Asks the running Claude Code session to generate `{ conceptName, metaphor, category, weight, connections }` for each
-3. Writes the result to `.claude/neural-map/state.json` (merging with any existing state)
-4. Renders a self-contained HTML file with the state inlined and opens it in your default browser
-
-No external API key. No build step. No dependencies.
+No external API key. No build step. No npm dependencies.
 
 ## Requirements
 
