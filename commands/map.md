@@ -43,26 +43,29 @@ Read `.claude/neural-map/state.json` if it exists.
 
 **If state.json exists AND has a non-empty `worldMetaphor` field:** use it verbatim. Do not re-pick. Skip to Step 3 with the existing world. This is the stability promise — names don't shake between runs.
 
-**If state.json doesn't exist, or has no `worldMetaphor`:** pick one extended metaphor that the whole project will be named within. Write it as a single short phrase, like `"a theater production"` or `"a working kitchen"` or `"a starship in flight"`. Look at the file paths and the previews together to choose a world that has natural roles for the kinds of files present (entry points, business logic, data, UI, config, style, tests, docs).
+**If state.json doesn't exist, or has no `worldMetaphor`:** pick one extended metaphor that the whole project will be named within. Write it as a single short phrase. Look at the file paths and the previews together to choose a world that has natural roles for the kinds of files present (entry points, business logic, data, UI, config, style, tests, docs).
 
-**World selection rules:**
-- Pick a world rich enough to have ~30 distinct natural roles. A theater has stage, lobby, box office, dressing room, marquee, lighting, props, ushers, the program, the dress rehearsal, the director's notes, the playbill — that's enough range. A "thermos" or "single shopping bag" wouldn't be.
-- Pick something concrete and physically inhabitable. The user is going to think *spatially* about their project. A "weather system" is weak (where's the entry point?). A "newspaper office" is strong (front desk, the press room, the morgue, the editor's desk).
-- Don't try to match the project's literal domain. A music app does NOT need to be a "concert hall." Pick the world that has the best *roles*, not the closest theme. A theater works for almost anything.
-- Avoid worlds that map awkwardly to data files. If you're tempted to name a database schema "the moon" or "the wind" because your world is celestial, the world is wrong — pick a different one.
+**World choice — bias toward universal.** The right world is one any user can immediately picture without referencing a hobby, genre, or career. Strong default choices, in rough preference order:
 
-**Anchor worlds — pick from these unless you have a strong reason to invent a new one:**
+1. **A house** — works for almost any project. Strong universal vocabulary (front door, foundation, wiring, walls, lighting, inspector).
+2. **A car** — works for any project with a clear "user → result" flow. Strong universal vocabulary (ignition, dashboard, steering, brakes, engine, mirrors).
+3. **A kitchen / a restaurant** — best for projects where data flows through preparation stages.
+4. **The human body** — best for projects where every part has a clear role keeping the whole alive.
+5. **A garden** — best for slow-growing, content-heavy, or curated projects.
+6. **A workshop** — best for tooling, build systems, dev tools.
 
-| World | Strong for | Example roles available |
-|---|---|---|
-| `a theater production` | most projects | stage, lobby, marquee, box office, dressing room, props, ushers, program, dress rehearsal, director's notes |
-| `a working kitchen` | data-heavy, async | walk-in, pantry, line, expediter, dish pit, ticket window, chef's notes, mise en place |
-| `a working newsroom` | content/CMS | front page, the wire, copy desk, fact-check, the morgue (archive), beat reporters, masthead |
-| `a starship in flight` | engineering-heavy | bridge, engine room, airlock, computer core, life support, comms, captain's log |
-| `a hotel front-of-house` | request/response | lobby, concierge, front desk, switchboard, housekeeping, room service, the safe |
-| `a small museum` | docs/reference | front entrance, exhibit halls, the gift shop, conservation lab, the catalog, docent notes |
-| `a working farm` | scheduled/cron | barn, field, greenhouse, silo, packing shed, the almanac, the chicken coop |
-| `a film set` | build pipelines | sound stage, craft services, wardrobe, the gaffer's truck, the dailies, the script |
+Acceptable when a project has a shape that genuinely fits:
+- A theater (clear stage / backstage / audience separation)
+- A city (many distinct districts of functionality)
+- A train station, a port (things move through stages)
+
+Avoid genre-specific worlds — they alienate users who don't share the frame:
+- A starship, a space station (sci-fi)
+- A castle, a royal court (fantasy)
+- A heist, a spy operation (caper genre)
+- A laboratory, a hospital (biases the metaphor toward sterile/clinical and kills warmth)
+
+When unsure, pick **a house**. It works for almost any project.
 
 Once chosen, the world goes in `state.json` as:
 
@@ -103,60 +106,80 @@ For each file in the scanner output, generate a concept entry with this exact sh
 - The `metaphor` is one sentence that places this file *within the chosen world*. NOT "Validates JWT tokens against the auth provider." YES (in the theater world) "Checks tickets at the door before guests reach their seats." The metaphor sentence reads like a tour guide pointing at this part of the building.
 - Use the file's content (preview) AND its path to infer the role. A file named `auth.ts` containing JWT logic is "The Usher" in a theater. The same file containing a login UI is "The Box Office Window."
 
+**Metaphor sentence formula — bridge the metaphor to the function.** The metaphor sentence does two jobs at once:
+
+1. Place the file as a part of the chosen world (the spatial anchor)
+2. Tell the user what the file actually does (the function anchor)
+
+Default pattern: **"The [metaphor role] of your [code base / app / project] — [plain-language description of what the file does, using metaphor vocabulary where natural]."**
+
+✅ GOOD: "The doorman of your app — checks every visitor's keys before letting them past the foyer."
+✅ GOOD: "The steering wheel of your app — decides which page the user lands on next based on the URL."
+❌ BAD (pure metaphor, no function anchor): "Checks tickets at the door."
+❌ BAD (pure function, no metaphor anchor): "Validates JWT tokens against the auth provider."
+
+The metaphor is a **hook**. The function is the **payload**. A good metaphor sentence delivers both. Variation in sentence shape is fine for rhythm — you don't have to lead with "The X of your app" every time — but the bridge between metaphor and function must always be present.
+
 **Concept name examples by category — three full example sets in three different worlds. Use these as anchors for the *level* of language and the *cohesion* you're aiming for.**
+
+### World: a house
+
+| Category | File | Concept Name | Metaphor |
+|---|---|---|---|
+| entry | `src/main.tsx` | The Front Door | The front door of your app — every visitor walks through here before reaching anything else. |
+| entry | `app/page.tsx` | The Foyer | The foyer of your app — the first room a visitor sees, where the rest of the house branches off. |
+| logic | `middleware/auth.ts` | The Doorman | The doorman of your app — checks every visitor's keys before letting them past the foyer. |
+| logic | `services/payments.ts` | The Cashbox | The cashbox of your app — every transaction in the house gets counted and locked away here. |
+| data | `db/schema.sql` | The Foundation | The foundation of your app — what every saved fact in the house is built on top of. |
+| data | `models/user.ts` | The Family Album | The family album of your app — the standing record of who lives here and how they're known. |
+| ui | `components/Header.tsx` | The Mantelpiece | The mantelpiece of your app — the strip across the top that announces whose house this is. |
+| ui | `components/Card.tsx` | The Picture Frame | The picture frame of your app — a standard shape the house uses to display anything once. |
+| config | `tsconfig.json` | The Building Code | The building code of your app — the rules every contractor reads before driving a single nail. |
+| config | `vite.config.ts` | The Wiring Plan | The wiring plan of your app — tells the build tools which cables connect to what. |
+| style | `tailwind.config.js` | The Paint Palette | The paint palette of your app — every color the house is allowed to wear, listed once for everyone. |
+| style | `theme.css` | The Lighting | The lighting of your app — sets the mood of every room without changing how anything is laid out. |
+| test | `auth.spec.ts` | The Inspector | The home inspector of your app — comes through on a schedule and writes down what's not up to code. |
+| test | `e2e/checkout.test.ts` | The Walkthrough | The buyer's walkthrough of your app — opens every door and tries every faucet before move-in. |
+| doc | `README.md` | The Welcome Letter | The welcome letter of your app — the page left on the counter for the first guest who arrives. |
+| doc | `ARCHITECTURE.md` | The Floor Plan | The floor plan of your app — the diagram every contractor consults to know which room is which. |
 
 ### World: a theater production
 
 | Category | File | Concept Name | Metaphor |
 |---|---|---|---|
-| entry | `src/main.tsx` | The House Lights | When the theater opens its doors for the night. |
-| entry | `app/page.tsx` | The Lobby | The first room your audience steps into. |
-| logic | `middleware/auth.ts` | The Usher | Checks tickets before letting people into the seats. |
-| logic | `services/payments.ts` | The Box Office | Where every transaction at the door is handled. |
-| data | `db/schema.sql` | The Archive Room | Where every program from every show is filed. |
-| data | `models/user.ts` | The Patron Card | What the theater remembers about each ticket-holder. |
-| ui | `components/Header.tsx` | The Marquee | The lit-up sign above the entrance. |
-| ui | `components/Card.tsx` | The Playbill | A small format the theater uses for any production. |
-| config | `tsconfig.json` | The House Rules | The codes the building inspector signs off on. |
-| config | `vite.config.ts` | The Stage Manager | Coordinates who moves what when. |
-| style | `tailwind.config.js` | The Costume Closet | Every outfit any actor is allowed to wear. |
-| style | `theme.css` | Stage Lighting | The mood every scene gets bathed in. |
-| test | `auth.spec.ts` | The Dress Rehearsal | A full run before opening night to catch what's broken. |
-| test | `e2e/checkout.test.ts` | Tech Week | Every system tested before paying audiences arrive. |
-| doc | `README.md` | The Program | What every audience member reads before the show starts. |
-| doc | `ARCHITECTURE.md` | Director's Notes | The script the production was actually built from. |
+| entry | `src/main.tsx` | The House Lights | The house lights of your app — what comes up first to signal the show is open for business. |
+| entry | `app/page.tsx` | The Lobby | The lobby of your app — the first room your audience steps into before any route branches off. |
+| logic | `middleware/auth.ts` | The Usher | The usher of your app — checks every ticket before letting a request reach a protected seat. |
+| logic | `services/payments.ts` | The Box Office | The box office of your app — where every paid transaction is recorded and reconciled. |
+| data | `db/schema.sql` | The Archive Room | The archive room of your app — defines how every program from every show is filed and retrieved. |
+| data | `models/user.ts` | The Patron Card | The patron card of your app — the standing record of who each ticket-holder is and what they're owed. |
+| ui | `components/Header.tsx` | The Marquee | The marquee of your app — the lit-up bar across the top that tells everyone what's playing tonight. |
+| ui | `components/Card.tsx` | The Playbill | The playbill of your app — the standard format the theater uses to present any one production. |
+| config | `tsconfig.json` | The House Rules | The house rules of your app — the building codes every script is compiled against. |
+| config | `vite.config.ts` | The Stage Manager | The stage manager of your app — coordinates which scripts and assets the build pulls onto the stage. |
+| style | `tailwind.config.js` | The Costume Closet | The costume closet of your app — every outfit any component is allowed to wear, listed once for everyone. |
+| style | `theme.css` | Stage Lighting | The stage lighting of your app — sets the mood of every scene without changing the blocking underneath. |
+| test | `auth.spec.ts` | The Dress Rehearsal | The dress rehearsal of your app — runs the auth flow end-to-end so opening night doesn't surprise anyone. |
+| test | `e2e/checkout.test.ts` | Tech Week | Tech week for your app — exercises every system in the checkout flow before real audiences arrive. |
+| doc | `README.md` | The Program | The program of your app — what every audience member reads before the show to know what they're in for. |
+| doc | `ARCHITECTURE.md` | Director's Notes | The director's notes of your app — the working script that explains why each scene is staged the way it is. |
 
 ### World: a working kitchen
 
 | Category | File | Concept Name | Metaphor |
 |---|---|---|---|
-| entry | `src/main.tsx` | The Service Window | Where every order enters the kitchen. |
-| logic | `middleware/auth.ts` | The Expediter | Checks every ticket before it goes to the line. |
-| logic | `services/payments.ts` | The Cashier | Where the bill gets settled at the end of the meal. |
-| data | `db/schema.sql` | The Walk-In | Where every ingredient and recipe is stored cold. |
-| data | `models/user.ts` | The Regular's Card | What the kitchen remembers about each diner. |
-| ui | `components/Header.tsx` | The Chalkboard | What's on offer tonight, written above the pass. |
-| ui | `components/Card.tsx` | The Order Ticket | The standard format every order is written on. |
-| config | `tsconfig.json` | The Health Code | The rules the inspector checks every visit. |
-| style | `theme.css` | The Atmosphere | Soft lighting, warm music, the mood the room is set in. |
-| test | `auth.spec.ts` | The Tasting | The chef tries every dish before service begins. |
-| doc | `README.md` | The Menu | What every guest looks at first. |
-| doc | `ARCHITECTURE.md` | The Mise en Place | What was prepped before service to make everything work. |
-
-### World: a starship in flight
-
-| Category | File | Concept Name | Metaphor |
-|---|---|---|---|
-| entry | `src/main.tsx` | The Airlock | The only way aboard the ship. |
-| logic | `middleware/auth.ts` | Security Clearance | Verifies credentials at the airlock. |
-| logic | `services/payments.ts` | The Quartermaster | Logs every supply transaction in the ledger. |
-| data | `db/schema.sql` | The Computer Core | The ship's long-term memory bank. |
-| ui | `components/Header.tsx` | The Bridge HUD | What the captain reads during every shift. |
-| config | `tsconfig.json` | Operations Manual | The protocols every crew member is trained on. |
-| style | `theme.css` | Running Lights | The visual personality of the hull at night. |
-| test | `auth.spec.ts` | Pre-Flight Check | Every system tested before launch. |
-| doc | `README.md` | Welcome Aboard | First thing handed to new crew. |
-| doc | `ARCHITECTURE.md` | The Schematics | The blueprints engineering works from. |
+| entry | `src/main.tsx` | The Service Window | The service window of your app — where every incoming order enters the kitchen and gets routed. |
+| logic | `middleware/auth.ts` | The Expediter | The expediter of your app — checks every ticket against the rules before it goes down the line. |
+| logic | `services/payments.ts` | The Cashier | The cashier of your app — where the bill is added up and settled at the end of the meal. |
+| data | `db/schema.sql` | The Walk-In | The walk-in of your app — defines how every ingredient and saved recipe is shelved and labeled. |
+| data | `models/user.ts` | The Regular's Card | The regular's card of your app — what the kitchen remembers about each diner between visits. |
+| ui | `components/Header.tsx` | The Chalkboard | The chalkboard of your app — the strip above the pass that announces what's on offer right now. |
+| ui | `components/Card.tsx` | The Order Ticket | The order ticket of your app — the standard format every order is written on so the line can read it. |
+| config | `tsconfig.json` | The Health Code | The health code of your app — the rules the inspector checks every build against. |
+| style | `theme.css` | The Atmosphere | The atmosphere of your app — soft lighting and warm music, the mood the room is set in. |
+| test | `auth.spec.ts` | The Tasting | The tasting of your app — the chef tries the auth dish before service begins to make sure it's seasoned right. |
+| doc | `README.md` | The Menu | The menu of your app — what every guest reads first to know what the kitchen actually serves. |
+| doc | `ARCHITECTURE.md` | The Mise en Place | The mise en place of your app — what was prepped before service so everything else runs in order. |
 
 These are anchors, not lookup tables. Your project will have files that don't match these examples one-for-one — you're calibrating the *level of language* AND the *cohesion of the world*, not pattern-matching to fixed names.
 

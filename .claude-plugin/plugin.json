@@ -1,6 +1,6 @@
 {
   "name": "neural-map",
-  "version": "0.2.0",
+  "version": "0.2.1",
   "description": "Visualize your Claude Code project as a navigable concept map. Each file gets a simplified name and metaphor instead of raw filenames.",
   "author": {
     "name": "Alex Schar",
